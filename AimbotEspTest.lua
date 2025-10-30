@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 -- === SETTINGS ===
 local LOCK_KEY = Enum.KeyCode.L
@@ -11,7 +12,7 @@ local lockEnabled = false
 
 -- === GUI SETUP ===
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BodyLockGUI"
+ScreenGui.Name = "FullLockGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -22,17 +23,17 @@ ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 20
-ToggleButton.Text = "🔓 Body Lock: OFF"
+ToggleButton.Text = "🔓 Lock: OFF"
 ToggleButton.Parent = ScreenGui
 ToggleButton.BorderSizePixel = 0
 ToggleButton.AutoButtonColor = true
 
 local function updateButton()
 	if lockEnabled then
-		ToggleButton.Text = "🔒 Body Lock: ON"
+		ToggleButton.Text = "🔒 Lock: ON"
 		ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 150, 60)
 	else
-		ToggleButton.Text = "🔓 Body Lock: OFF"
+		ToggleButton.Text = "🔓 Lock: OFF"
 		ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 	end
 end
@@ -88,19 +89,25 @@ local function getNearestPlayer()
 	return nearestPlayer
 end
 
--- === BODY LOCK ===
+-- === BODY & CAMERA LOCK LOOP ===
 RunService.RenderStepped:Connect(function()
 	if not lockEnabled then return end
 	local localChar = LocalPlayer.Character
 	if not localChar or not localChar:FindFirstChild("HumanoidRootPart") then return end
-	local HumanoidRootPart = localChar.HumanoidRootPart
+	local HRP = localChar.HumanoidRootPart
 
 	local nearest = getNearestPlayer()
 	if nearest and nearest.Character and nearest.Character:FindFirstChild("HumanoidRootPart") then
 		local targetPos = nearest.Character.HumanoidRootPart.Position
-		local myPos = HumanoidRootPart.Position
+		local myPos = HRP.Position
 		local lookVector = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos).Unit
-		HumanoidRootPart.CFrame = CFrame.new(myPos, myPos + lookVector)
+
+		-- Rotate character
+		HRP.CFrame = CFrame.new(myPos, myPos + lookVector)
+
+		-- Lock camera to follow character
+		Camera.CameraType = Enum.CameraType.Attach
+		Camera.CameraSubject = HRP
 	end
 end)
 
@@ -108,6 +115,13 @@ end)
 local function toggleLock()
 	lockEnabled = not lockEnabled
 	updateButton()
+	if not lockEnabled then
+		-- Reset camera to default
+		Camera.CameraType = Enum.CameraType.Custom
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+			Camera.CameraSubject = LocalPlayer.Character.Humanoid
+		end
+	end
 end
 
 -- === GUI BUTTON CLICK ===
@@ -121,10 +135,5 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
--- === UPDATE BUTTON VISUALS INITIALLY ===
+-- INITIALIZE
 updateButton()
-
--- === HANDLE CHARACTER RESET (RESPAWN) ===
-LocalPlayer.CharacterAdded:Connect(function()
-	wait(1) -- give time for HumanoidRootPart to exist
-end)
