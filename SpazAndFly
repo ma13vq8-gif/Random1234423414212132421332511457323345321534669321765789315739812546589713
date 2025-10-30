@@ -1,4 +1,3 @@
--- StarterPlayerScripts/SpinFlingerFlyProperGUI.lua
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -6,7 +5,6 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HRP = Character:WaitForChild("HumanoidRootPart")
-local Humanoid = Character:WaitForChild("Humanoid")
 
 -- GUI
 local ScreenGui = Instance.new("ScreenGui")
@@ -14,7 +12,7 @@ ScreenGui.Name = "SpinFlingerGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Helper function to create toggle buttons
+-- Helper function: create toggle
 local function createToggle(parent, text, yPos, default)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 200, 0, 40)
@@ -24,9 +22,9 @@ local function createToggle(parent, text, yPos, default)
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 18
     btn.Text = text..(default and ": ON" or ": OFF")
+    btn.Parent = parent
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = true
-    btn.Parent = parent
 
     local state = default
     btn.MouseButton1Click:Connect(function()
@@ -37,17 +35,16 @@ local function createToggle(parent, text, yPos, default)
     return function() return state end
 end
 
--- Create separate toggles
+-- Create toggles
 local flyEnabled = createToggle(ScreenGui, "Fly", 50, true)
-local spinEnabled = createToggle(ScreenGui, "Spin", 110, true) -- properly spaced below Fly toggle
+local spinEnabled = createToggle(ScreenGui, "Spin", 110, true)
 
--- Helper function to create sliders
+-- Helper function: create slider
 local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 220, 0, 60)
     frame.Position = UDim2.new(0, 20, 0, yPos)
     frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    frame.BorderSizePixel = 0
     frame.Parent = parent
 
     local label = Instance.new("TextLabel")
@@ -64,47 +61,55 @@ local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
     bar.Size = UDim2.new(1, -20, 0, 20)
     bar.Position = UDim2.new(0, 10, 0, 30)
     bar.BackgroundColor3 = Color3.fromRGB(100,100,100)
-    bar.BorderSizePixel = 0
     bar.Parent = frame
 
     local knob = Instance.new("Frame")
     knob.Size = UDim2.new((defaultVal-minVal)/(maxVal-minVal),0,1,0)
     knob.Position = UDim2.new(0,0,0,0)
     knob.BackgroundColor3 = Color3.fromRGB(200,50,50)
-    knob.BorderSizePixel = 0
     knob.Parent = bar
 
     local dragging = false
-    knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = UserInputService:GetMouseLocation()
+            local absPos = knob.AbsolutePosition
+            local absSize = knob.AbsoluteSize
+            if mousePos.X >= absPos.X and mousePos.X <= absPos.X+absSize.X and
+               mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y+absSize.Y then
+                dragging = true
+            end
+        end
     end)
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
     end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mouse = UserInputService:GetMouseLocation()
+
+    local value = defaultVal
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mouseX = UserInputService:GetMouseLocation().X
             local barPos = bar.AbsolutePosition.X
             local barSize = bar.AbsoluteSize.X
-            local relative = math.clamp((mouse.X - barPos)/barSize, 0,1)
+            local relative = math.clamp((mouseX - barPos)/barSize,0,1)
             knob.Size = UDim2.new(relative,0,1,0)
-            local value = minVal + relative*(maxVal-minVal)
+            value = minVal + relative*(maxVal-minVal)
             label.Text = labelText.." : "..math.floor(value)
         end
     end)
-    return function() 
-        local rel = knob.Size.X.Scale
-        return minVal + rel*(maxVal-minVal)
-    end
+
+    return function() return value end
 end
 
 -- Sliders
 local getFlySpeed = createSlider(ScreenGui, "Fly Speed", 180, 10, 200, 50)
 local getSpinSpeed = createSlider(ScreenGui, "Spin Speed", 260, 500, 5000, 2000)
 
--- Movement keys
-local moveVec = Vector3.new(0,0,0)
+-- Movement
 local keysDown = {}
+local moveVec = Vector3.new(0,0,0)
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     keysDown[input.KeyCode] = true
@@ -127,7 +132,7 @@ local function updateMoveVec()
 end
 
 -- Main loop
-RunService.RenderStepped:Connect(function(dt)
+RunService.RenderStepped:Connect(function()
     if not HRP or not HRP.Parent then return end
     updateMoveVec()
 
