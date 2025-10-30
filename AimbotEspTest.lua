@@ -4,8 +4,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
 -- === SETTINGS ===
 local LOCK_KEY = Enum.KeyCode.L
@@ -68,13 +66,14 @@ Players.PlayerAdded:Connect(function(player)
 	end)
 end)
 
--- === FIND NEAREST PLAYER ===
+-- === HELPER FUNCTION ===
 local function getNearestPlayer()
-	local nearestPlayer = nil
-	local shortestDistance = math.huge
 	local localChar = LocalPlayer.Character
 	if not localChar or not localChar:FindFirstChild("HumanoidRootPart") then return nil end
 	local myPos = localChar.HumanoidRootPart.Position
+
+	local nearestPlayer = nil
+	local shortestDistance = math.huge
 
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -85,12 +84,17 @@ local function getNearestPlayer()
 			end
 		end
 	end
+
 	return nearestPlayer
 end
 
--- === ROTATE BODY TOWARDS NEAREST PLAYER ===
+-- === BODY LOCK ===
 RunService.RenderStepped:Connect(function()
 	if not lockEnabled then return end
+	local localChar = LocalPlayer.Character
+	if not localChar or not localChar:FindFirstChild("HumanoidRootPart") then return end
+	local HumanoidRootPart = localChar.HumanoidRootPart
+
 	local nearest = getNearestPlayer()
 	if nearest and nearest.Character and nearest.Character:FindFirstChild("HumanoidRootPart") then
 		local targetPos = nearest.Character.HumanoidRootPart.Position
@@ -106,7 +110,7 @@ local function toggleLock()
 	updateButton()
 end
 
--- === BUTTON CLICK ===
+-- === GUI BUTTON CLICK ===
 ToggleButton.MouseButton1Click:Connect(toggleLock)
 
 -- === KEYBIND ===
@@ -117,5 +121,10 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
--- INITIALIZE
+-- === UPDATE BUTTON VISUALS INITIALLY ===
 updateButton()
+
+-- === HANDLE CHARACTER RESET (RESPAWN) ===
+LocalPlayer.CharacterAdded:Connect(function()
+	wait(1) -- give time for HumanoidRootPart to exist
+end)
