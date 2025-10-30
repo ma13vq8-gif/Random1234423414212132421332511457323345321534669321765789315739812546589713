@@ -1,41 +1,39 @@
--- StarterPlayerScripts/FlySpazGUI.lua
+-- StarterPlayerScripts/UltimateTrollFly.lua
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
-
--- wait for character
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HRP = Character:WaitForChild("HumanoidRootPart")
 local Humanoid = Character:WaitForChild("Humanoid")
 
 -- GUI setup
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FlySpazGUI"
+ScreenGui.Name = "UltimateTrollGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 200, 0, 40)
+ToggleButton.Size = UDim2.new(0, 220, 0, 40)
 ToggleButton.Position = UDim2.new(0, 20, 0, 100)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 20
-ToggleButton.Text = "🛸 Fly & Spaz: OFF"
+ToggleButton.Text = "🛸 Ultimate Troll: OFF"
 ToggleButton.Parent = ScreenGui
 ToggleButton.BorderSizePixel = 0
 ToggleButton.AutoButtonColor = true
 
 local enabled = false
-
 local function updateButton()
     if enabled then
-        ToggleButton.Text = "🛸 Fly & Spaz: ON"
+        ToggleButton.Text = "🛸 Ultimate Troll: ON"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 150, 60)
     else
-        ToggleButton.Text = "🛸 Fly & Spaz: OFF"
+        ToggleButton.Text = "🛸 Ultimate Troll: OFF"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
     end
 end
@@ -44,14 +42,17 @@ ToggleButton.MouseButton1Click:Connect(function()
     enabled = not enabled
     updateButton()
 end)
-
 updateButton()
 
--- Fly & Spaz parameters
-local FLY_SPEED = 50 -- studs per second
-local SPIN_SPEED = 10 -- radians per second
+-- Fly parameters
+local FLY_SPEED = 50
+local SPIN_SPEED = 10
+local TROLL_INTENSITY = 0.5
+local BURST_CHANCE = 0.02 -- chance per frame to do a velocity burst
+local EMOJI_CHANCE = 0.01 -- chance per frame to spawn emoji
+local PARTICLE_CHANCE = 0.05 -- chance per frame to spawn particle
 
--- Movement controls
+-- movement
 local moveVec = Vector3.new(0,0,0)
 local keysDown = {}
 
@@ -59,7 +60,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     keysDown[input.KeyCode] = true
 end)
-
 UserInputService.InputEnded:Connect(function(input, processed)
     keysDown[input.KeyCode] = false
 end)
@@ -76,20 +76,79 @@ local function updateMoveVec()
     moveVec = vec
 end
 
--- RunService loop
+-- fun troll helpers
+local function randomBurst()
+    local dir = Vector3.new(math.random()-0.5, math.random(), math.random()-0.5).Unit
+    local force = 50 + math.random()*50
+    HRP.Velocity = HRP.Velocity + dir*force
+end
+
+local function spawnEmoji()
+    local emoji = Instance.new("BillboardGui")
+    emoji.Size = UDim2.new(0,50,0,50)
+    emoji.AlwaysOnTop = true
+    emoji.Parent = HRP
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1,0,1,0)
+    label.BackgroundTransparency = 1
+    local emojis = {"💥","😂","🔥","🤪","🎉","💫"}
+    label.Text = emojis[math.random(1,#emojis)]
+    label.TextScaled = true
+    label.TextColor3 = Color3.fromRGB(math.random(0,255),math.random(0,255),math.random(0,255))
+    label.Font = Enum.Font.SourceSansBold
+    label.Parent = emoji
+
+    -- fade and destroy after 1 sec
+    TweenService:Create(label, TweenInfo.new(1), {TextTransparency=1}):Play()
+    game:GetService("Debris"):AddItem(emoji,1)
+end
+
+local function spawnParticle()
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(0.5,0.5,0.5)
+    part.Anchored = true
+    part.CanCollide = false
+    part.Material = Enum.Material.Neon
+    part.Color = Color3.fromHSV(math.random(),1,1)
+    part.Position = HRP.Position + Vector3.new(math.random()-0.5,math.random()-0.5,math.random()-0.5)*2
+    part.Parent = workspace
+    game:GetService("Debris"):AddItem(part,0.5)
+end
+
+-- main loop
 RunService.RenderStepped:Connect(function(dt)
     if not enabled then return end
     if not HRP or not HRP.Parent then return end
 
-    -- update movement
+    -- move
     updateMoveVec()
     HRP.Velocity = moveVec * FLY_SPEED
 
-    -- apply random spazzing rotation
+    -- chaotic spinning & wobble
+    local tickVal = tick()
     local randRot = CFrame.Angles(
-        math.sin(tick()*SPIN_SPEED)*0.5,
-        math.cos(tick()*SPIN_SPEED)*0.5,
-        math.sin(tick()*SPIN_SPEED*0.7)*0.5
+        math.sin(tickVal*SPIN_SPEED)*TROLL_INTENSITY,
+        math.cos(tickVal*SPIN_SPEED*0.9)*TROLL_INTENSITY,
+        math.sin(tickVal*SPIN_SPEED*0.7)*TROLL_INTENSITY
     )
-    HRP.CFrame = CFrame.new(HRP.Position) * randRot
+
+    -- tiny bouncing
+    local bounce = math.sin(tickVal*20)*0.5
+    HRP.CFrame = CFrame.new(HRP.Position + Vector3.new(0,bounce,0)) * randRot
+
+    -- random bursts
+    if math.random() < BURST_CHANCE then
+        randomBurst()
+    end
+
+    -- random emojis
+    if math.random() < EMOJI_CHANCE then
+        spawnEmoji()
+    end
+
+    -- random particles
+    if math.random() < PARTICLE_CHANCE then
+        spawnParticle()
+    end
 end)
