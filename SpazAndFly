@@ -1,4 +1,4 @@
--- StarterPlayerScripts/SuperSpinFly.lua
+-- StarterPlayerScripts/SpinFlingerFly.lua
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -8,20 +8,20 @@ local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HRP = Character:WaitForChild("HumanoidRootPart")
 local Humanoid = Character:WaitForChild("Humanoid")
 
--- GUI setup
+-- GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SuperSpinFlyGUI"
+ScreenGui.Name = "SpinFlingerGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 200, 0, 40)
+ToggleButton.Size = UDim2.new(0, 220, 0, 40)
 ToggleButton.Position = UDim2.new(0, 20, 0, 100)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 150)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 20
-ToggleButton.Text = "🌀 Super Spin: OFF"
+ToggleButton.Text = "🌀 Spin Flinger: OFF"
 ToggleButton.Parent = ScreenGui
 ToggleButton.BorderSizePixel = 0
 ToggleButton.AutoButtonColor = true
@@ -29,10 +29,10 @@ ToggleButton.AutoButtonColor = true
 local enabled = false
 local function updateButton()
     if enabled then
-        ToggleButton.Text = "🌀 Super Spin: ON"
+        ToggleButton.Text = "🌀 Spin Flinger: ON"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 150, 60)
     else
-        ToggleButton.Text = "🌀 Super Spin: OFF"
+        ToggleButton.Text = "🌀 Spin Flinger: OFF"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 150)
     end
 end
@@ -43,9 +43,9 @@ ToggleButton.MouseButton1Click:Connect(function()
 end)
 updateButton()
 
--- Fly parameters
+-- Fly & Spin parameters
 local FLY_SPEED = 50
-local SPIN_SPEED = 999 -- insane spin
+local SPIN_FORCE = 2000 -- angular velocity for flinging
 local moveVec = Vector3.new(0,0,0)
 local keysDown = {}
 
@@ -71,14 +71,18 @@ end
 
 -- Main loop
 RunService.RenderStepped:Connect(function(dt)
-    if not enabled then return end
+    if not enabled then
+        if HRP then
+            HRP.AssemblyAngularVelocity = Vector3.new(0,0,0)
+        end
+        return
+    end
     if not HRP or not HRP.Parent then return end
 
-    -- fly movement
+    -- Fly
     updateMoveVec()
     HRP.Velocity = moveVec * FLY_SPEED
 
-    -- super spin around Y-axis
-    local currentPos = HRP.Position
-    HRP.CFrame = CFrame.new(currentPos) * CFrame.Angles(0, math.rad(SPIN_SPEED)*dt, 0)
+    -- Apply spin for flinging
+    HRP.AssemblyAngularVelocity = Vector3.new(0, SPIN_FORCE, 0)
 end)
