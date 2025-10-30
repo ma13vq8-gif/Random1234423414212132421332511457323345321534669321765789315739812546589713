@@ -32,15 +32,21 @@ local function createToggle(parent, text, yPos, default)
         btn.Text = text..(state and ": ON" or ": OFF")
         btn.BackgroundColor3 = state and Color3.fromRGB(60,150,60) or Color3.fromRGB(150,60,60)
     end)
-    return function() return state end
+    return function() return state end, function(value)
+        state = value
+        btn.Text = text..(state and ": ON" or ": OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(60,150,60) or Color3.fromRGB(150,60,60)
+    end
 end
 
--- Create toggles
-local flyEnabled = createToggle(ScreenGui, "Fly", 50, true)
-local spinEnabled = createToggle(ScreenGui, "Spin", 110, true)
+-- Create toggles (start OFF)
+local flyEnabled, setFly = createToggle(ScreenGui, "Fly", 50, false)
+local spinEnabled, setSpin = createToggle(ScreenGui, "Spin", 110, false)
 
 -- Helper function: create slider
 local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
+    local value = defaultVal
+
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 220, 0, 60)
     frame.Position = UDim2.new(0, 20, 0, yPos)
@@ -54,7 +60,7 @@ local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
     label.TextColor3 = Color3.fromRGB(255,255,255)
     label.Font = Enum.Font.SourceSansBold
     label.TextSize = 14
-    label.Text = labelText.." : "..defaultVal
+    label.Text = labelText.." : "..value
     label.Parent = frame
 
     local bar = Instance.new("Frame")
@@ -70,30 +76,19 @@ local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
     knob.Parent = bar
 
     local dragging = false
-    UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mousePos = UserInputService:GetMouseLocation()
-            local absPos = knob.AbsolutePosition
-            local absSize = knob.AbsoluteSize
-            if mousePos.X >= absPos.X and mousePos.X <= absPos.X+absSize.X and
-               mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y+absSize.Y then
-                dragging = true
-            end
-        end
+    knob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
     end)
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
     end)
 
-    local value = defaultVal
-    RunService.RenderStepped:Connect(function()
-        if dragging then
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local mouseX = UserInputService:GetMouseLocation().X
             local barPos = bar.AbsolutePosition.X
             local barSize = bar.AbsoluteSize.X
-            local relative = math.clamp((mouseX - barPos)/barSize,0,1)
+            local relative = math.clamp((mouseX - barPos)/barSize, 0, 1)
             knob.Size = UDim2.new(relative,0,1,0)
             value = minVal + relative*(maxVal-minVal)
             label.Text = labelText.." : "..math.floor(value)
@@ -106,6 +101,27 @@ end
 -- Sliders
 local getFlySpeed = createSlider(ScreenGui, "Fly Speed", 180, 10, 200, 50)
 local getSpinSpeed = createSlider(ScreenGui, "Spin Speed", 260, 500, 5000, 2000)
+
+-- Destroy button
+local destroyBtn = Instance.new("TextButton")
+destroyBtn.Size = UDim2.new(0, 200, 0, 40)
+destroyBtn.Position = UDim2.new(0, 20, 0, 330)
+destroyBtn.BackgroundColor3 = Color3.fromRGB(150,50,50)
+destroyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+destroyBtn.Font = Enum.Font.SourceSansBold
+destroyBtn.TextSize = 18
+destroyBtn.Text = "Destroy GUI"
+destroyBtn.Parent = ScreenGui
+destroyBtn.BorderSizePixel = 0
+destroyBtn.AutoButtonColor = true
+
+destroyBtn.MouseButton1Click:Connect(function()
+    -- Disable fly and spin
+    setFly(false)
+    setSpin(false)
+    -- Remove GUI
+    ScreenGui:Destroy()
+end)
 
 -- Movement
 local keysDown = {}
