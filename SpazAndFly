@@ -1,0 +1,95 @@
+-- StarterPlayerScripts/FlySpazGUI.lua
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- wait for character
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HRP = Character:WaitForChild("HumanoidRootPart")
+local Humanoid = Character:WaitForChild("Humanoid")
+
+-- GUI setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FlySpazGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 200, 0, 40)
+ToggleButton.Position = UDim2.new(0, 20, 0, 100)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 20
+ToggleButton.Text = "🛸 Fly & Spaz: OFF"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BorderSizePixel = 0
+ToggleButton.AutoButtonColor = true
+
+local enabled = false
+
+local function updateButton()
+    if enabled then
+        ToggleButton.Text = "🛸 Fly & Spaz: ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 150, 60)
+    else
+        ToggleButton.Text = "🛸 Fly & Spaz: OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
+    end
+end
+
+ToggleButton.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    updateButton()
+end)
+
+updateButton()
+
+-- Fly & Spaz parameters
+local FLY_SPEED = 50 -- studs per second
+local SPIN_SPEED = 10 -- radians per second
+
+-- Movement controls
+local moveVec = Vector3.new(0,0,0)
+local keysDown = {}
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    keysDown[input.KeyCode] = true
+end)
+
+UserInputService.InputEnded:Connect(function(input, processed)
+    keysDown[input.KeyCode] = false
+end)
+
+local function updateMoveVec()
+    local vec = Vector3.new(0,0,0)
+    if keysDown[Enum.KeyCode.W] then vec = vec + workspace.CurrentCamera.CFrame.LookVector end
+    if keysDown[Enum.KeyCode.S] then vec = vec - workspace.CurrentCamera.CFrame.LookVector end
+    if keysDown[Enum.KeyCode.A] then vec = vec - workspace.CurrentCamera.CFrame.RightVector end
+    if keysDown[Enum.KeyCode.D] then vec = vec + workspace.CurrentCamera.CFrame.RightVector end
+    if keysDown[Enum.KeyCode.Space] then vec = vec + Vector3.new(0,1,0) end
+    if keysDown[Enum.KeyCode.LeftShift] then vec = vec - Vector3.new(0,1,0) end
+    if vec.Magnitude > 0 then vec = vec.Unit end
+    moveVec = vec
+end
+
+-- RunService loop
+RunService.RenderStepped:Connect(function(dt)
+    if not enabled then return end
+    if not HRP or not HRP.Parent then return end
+
+    -- update movement
+    updateMoveVec()
+    HRP.Velocity = moveVec * FLY_SPEED
+
+    -- apply random spazzing rotation
+    local randRot = CFrame.Angles(
+        math.sin(tick()*SPIN_SPEED)*0.5,
+        math.cos(tick()*SPIN_SPEED)*0.5,
+        math.sin(tick()*SPIN_SPEED*0.7)*0.5
+    )
+    HRP.CFrame = CFrame.new(HRP.Position) * randRot
+end)
