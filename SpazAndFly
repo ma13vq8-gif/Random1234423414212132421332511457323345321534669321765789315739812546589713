@@ -43,8 +43,8 @@ end
 local flyEnabled, setFly = createToggle(ScreenGui, "Fly", 50, false)
 local spinEnabled, setSpin = createToggle(ScreenGui, "Spin", 110, false)
 
--- Helper: create slider
-local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
+-- Helper: create TextBox input for speed
+local function createSpeedInput(parent, labelText, yPos, defaultVal, maxVal)
     local value = defaultVal
 
     local frame = Instance.new("Frame")
@@ -63,44 +63,35 @@ local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
     label.Text = labelText.." : "..value
     label.Parent = frame
 
-    local bar = Instance.new("Frame")
-    bar.Size = UDim2.new(1, -20, 0, 20)
-    bar.Position = UDim2.new(0, 10, 0, 30)
-    bar.BackgroundColor3 = Color3.fromRGB(100,100,100)
-    bar.Parent = frame
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.new(1, -20, 0, 30)
+    input.Position = UDim2.new(0, 10, 0, 30)
+    input.BackgroundColor3 = Color3.fromRGB(100,100,100)
+    input.TextColor3 = Color3.fromRGB(255,255,255)
+    input.Text = tostring(defaultVal)
+    input.Font = Enum.Font.SourceSansBold
+    input.TextSize = 18
+    input.ClearTextOnFocus = false
+    input.Parent = frame
 
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new((defaultVal-minVal)/(maxVal-minVal),0,1,0)
-    knob.Position = UDim2.new(0,0,0,0)
-    knob.BackgroundColor3 = Color3.fromRGB(200,50,50)
-    knob.Parent = bar
-
-    local dragging = false
-    knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mouseX = UserInputService:GetMouseLocation().X
-            local barPos = bar.AbsolutePosition.X
-            local barSize = bar.AbsoluteSize.X
-            local relative = math.clamp((mouseX - barPos)/barSize, 0, 1)
-            knob.Size = UDim2.new(relative,0,1,0)
-            value = minVal + relative*(maxVal-minVal)
-            label.Text = labelText.." : "..math.floor(value)
+    input.FocusLost:Connect(function(enterPressed)
+        local num = tonumber(input.Text)
+        if num then
+            num = math.clamp(num, 0, maxVal)
+            value = num
+            input.Text = tostring(num)
+            label.Text = labelText.." : "..num
+        else
+            input.Text = tostring(value)
         end
     end)
 
     return function() return value end
 end
 
--- Sliders
-local getFlySpeed = createSlider(ScreenGui, "Fly Speed", 180, 10, 200, 50)
-local getSpinSpeed = createSlider(ScreenGui, "Spin Speed", 260, 30, 1000, 180) -- degrees per second
+-- Speed inputs
+local getFlySpeed = createSpeedInput(ScreenGui, "Fly Speed", 180, 50, 9999)
+local getSpinSpeed = createSpeedInput(ScreenGui, "Spin Speed", 260, 180, 9999)
 
 -- Destroy button
 local destroyBtn = Instance.new("TextButton")
@@ -116,10 +107,8 @@ destroyBtn.BorderSizePixel = 0
 destroyBtn.AutoButtonColor = true
 
 destroyBtn.MouseButton1Click:Connect(function()
-    -- Disable features
     setFly(false)
     setSpin(false)
-    -- Remove GUI
     ScreenGui:Destroy()
 end)
 
@@ -152,11 +141,12 @@ RunService.RenderStepped:Connect(function(dt)
     if not HRP or not HRP.Parent then return end
     updateMoveVec()
 
-    -- Fly
+    -- Smooth Fly
     if flyEnabled() then
-        HRP.Velocity = moveVec * getFlySpeed()
-    else
-        HRP.Velocity = Vector3.new(0,0,0)
+        local currentVelocity = HRP.Velocity
+        local targetVelocity = moveVec * getFlySpeed()
+        local blendFactor = 0.2 -- smaller = smoother
+        HRP.Velocity = currentVelocity:Lerp(targetVelocity, blendFactor)
     end
 
     -- Spin in place
