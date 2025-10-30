@@ -1,8 +1,7 @@
--- StarterPlayerScripts/SpinFlingerFly.lua
+-- StarterPlayerScripts/SpinFlingerFlySlider.lua
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HRP = Character:WaitForChild("HumanoidRootPart")
@@ -14,6 +13,7 @@ ScreenGui.Name = "SpinFlingerGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
+-- Toggle button
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 220, 0, 40)
 ToggleButton.Position = UDim2.new(0, 20, 0, 100)
@@ -26,34 +26,84 @@ ToggleButton.Parent = ScreenGui
 ToggleButton.BorderSizePixel = 0
 ToggleButton.AutoButtonColor = true
 
+-- Speed slider frame
+local SliderFrame = Instance.new("Frame")
+SliderFrame.Size = UDim2.new(0, 220, 0, 60)
+SliderFrame.Position = UDim2.new(0, 20, 0, 150)
+SliderFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+SliderFrame.BorderSizePixel = 0
+SliderFrame.Parent = ScreenGui
+
+local SliderLabel = Instance.new("TextLabel")
+SliderLabel.Size = UDim2.new(1,0,0,20)
+SliderLabel.Position = UDim2.new(0,0,0,0)
+SliderLabel.BackgroundTransparency = 1
+SliderLabel.TextColor3 = Color3.fromRGB(255,255,255)
+SliderLabel.Font = Enum.Font.SourceSansBold
+SliderLabel.TextSize = 14
+SliderLabel.Text = "Fly Speed: 50"
+SliderLabel.Parent = SliderFrame
+
+local SliderBar = Instance.new("Frame")
+SliderBar.Size = UDim2.new(1, -20, 0, 20)
+SliderBar.Position = UDim2.new(0, 10, 0, 30)
+SliderBar.BackgroundColor3 = Color3.fromRGB(100,100,100)
+SliderBar.BorderSizePixel = 0
+SliderBar.Parent = SliderFrame
+
+local SliderKnob = Instance.new("Frame")
+SliderKnob.Size = UDim2.new(0,20,1,0)
+SliderKnob.Position = UDim2.new(0.25,0,0,0) -- initial 25%
+SliderKnob.BackgroundColor3 = Color3.fromRGB(200,50,50)
+SliderKnob.BorderSizePixel = 0
+SliderKnob.Parent = SliderBar
+
+-- Variables
 local enabled = false
-local function updateButton()
-    if enabled then
-        ToggleButton.Text = "🌀 Spin Flinger: ON"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 150, 60)
-    else
-        ToggleButton.Text = "🌀 Spin Flinger: OFF"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 150)
-    end
-end
+local FLY_SPEED = 50
+local SPIN_FORCE = 2000
+local moveVec = Vector3.new(0,0,0)
+local keysDown = {}
+local dragging = false
 
 ToggleButton.MouseButton1Click:Connect(function()
     enabled = not enabled
-    updateButton()
+    ToggleButton.Text = enabled and "🌀 Spin Flinger: ON" or "🌀 Spin Flinger: OFF"
+    ToggleButton.BackgroundColor3 = enabled and Color3.fromRGB(60,150,60) or Color3.fromRGB(60,60,150)
 end)
-updateButton()
 
--- Fly & Spin parameters
-local FLY_SPEED = 50
-local SPIN_FORCE = 2000 -- angular velocity for flinging
-local moveVec = Vector3.new(0,0,0)
-local keysDown = {}
+-- Slider drag
+SliderKnob.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+    end
+end)
 
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local mouse = UserInputService:GetMouseLocation()
+        local barPos = SliderBar.AbsolutePosition.X
+        local barSize = SliderBar.AbsoluteSize.X
+        local relative = math.clamp((mouse.X - barPos)/barSize, 0,1)
+        SliderKnob.Position = UDim2.new(relative,0,0,0)
+        FLY_SPEED = 10 + relative*190 -- fly speed range 10-200
+        SliderLabel.Text = "Fly Speed: "..math.floor(FLY_SPEED)
+    end
+end)
+
+-- Movement keys
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     keysDown[input.KeyCode] = true
 end)
-UserInputService.InputEnded:Connect(function(input, processed)
+UserInputService.InputEnded:Connect(function(input)
+    if processed then return end
     keysDown[input.KeyCode] = false
 end)
 
@@ -72,17 +122,12 @@ end
 -- Main loop
 RunService.RenderStepped:Connect(function(dt)
     if not enabled then
-        if HRP then
-            HRP.AssemblyAngularVelocity = Vector3.new(0,0,0)
-        end
+        if HRP then HRP.AssemblyAngularVelocity = Vector3.new(0,0,0) end
         return
     end
     if not HRP or not HRP.Parent then return end
 
-    -- Fly
     updateMoveVec()
     HRP.Velocity = moveVec * FLY_SPEED
-
-    -- Apply spin for flinging
     HRP.AssemblyAngularVelocity = Vector3.new(0, SPIN_FORCE, 0)
 end)
