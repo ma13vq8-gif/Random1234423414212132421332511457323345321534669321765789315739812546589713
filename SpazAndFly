@@ -12,7 +12,7 @@ ScreenGui.Name = "SpinFlingerGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Helper function: create toggle
+-- Helper: create toggle
 local function createToggle(parent, text, yPos, default)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 200, 0, 40)
@@ -43,7 +43,7 @@ end
 local flyEnabled, setFly = createToggle(ScreenGui, "Fly", 50, false)
 local spinEnabled, setSpin = createToggle(ScreenGui, "Spin", 110, false)
 
--- Helper function: create slider
+-- Helper: create slider
 local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
     local value = defaultVal
 
@@ -100,7 +100,7 @@ end
 
 -- Sliders
 local getFlySpeed = createSlider(ScreenGui, "Fly Speed", 180, 10, 200, 50)
-local getSpinSpeed = createSlider(ScreenGui, "Spin Speed", 260, 500, 5000, 2000)
+local getSpinSpeed = createSlider(ScreenGui, "Spin Speed", 260, 30, 1000, 180) -- degrees per second
 
 -- Destroy button
 local destroyBtn = Instance.new("TextButton")
@@ -116,7 +116,7 @@ destroyBtn.BorderSizePixel = 0
 destroyBtn.AutoButtonColor = true
 
 destroyBtn.MouseButton1Click:Connect(function()
-    -- Disable fly and spin
+    -- Disable features
     setFly(false)
     setSpin(false)
     -- Remove GUI
@@ -148,7 +148,7 @@ local function updateMoveVec()
 end
 
 -- Main loop
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt)
     if not HRP or not HRP.Parent then return end
     updateMoveVec()
 
@@ -159,10 +159,9 @@ RunService.RenderStepped:Connect(function()
         HRP.Velocity = Vector3.new(0,0,0)
     end
 
-    -- Spin
+    -- Spin in place
     if spinEnabled() then
-        HRP.AssemblyAngularVelocity = Vector3.new(0, getSpinSpeed(), 0)
-    else
-        HRP.AssemblyAngularVelocity = Vector3.new(0,0,0)
+        local rotation = CFrame.Angles(0, math.rad(getSpinSpeed() * dt), 0)
+        HRP.CFrame = HRP.CFrame * rotation
     end
 end)
