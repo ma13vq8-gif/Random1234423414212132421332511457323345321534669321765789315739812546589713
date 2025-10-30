@@ -136,6 +136,9 @@ local function updateMoveVec()
     moveVec = vec
 end
 
+-- Table to prevent multiple flings per frame
+local flingCooldown = {}
+
 -- Main loop
 RunService.RenderStepped:Connect(function(dt)
     if not HRP or not HRP.Parent then return end
@@ -153,5 +156,23 @@ RunService.RenderStepped:Connect(function(dt)
     if spinEnabled() then
         local rotation = CFrame.Angles(0, math.rad(getSpinSpeed() * dt), 0)
         HRP.CFrame = HRP.CFrame * rotation
+    end
+end)
+
+-- Spin fling on touch
+HRP.Touched:Connect(function(hit)
+    if not spinEnabled() then return end
+    local otherChar = hit.Parent
+    if otherChar and otherChar ~= Character then
+        local otherHRP = otherChar:FindFirstChild("HumanoidRootPart")
+        if otherHRP then
+            if not flingCooldown[otherHRP] then
+                flingCooldown[otherHRP] = true
+                local direction = (otherHRP.Position - HRP.Position).Unit
+                otherHRP.Velocity = direction * getSpinSpeed()
+                RunService.RenderStepped:Wait()
+                flingCooldown[otherHRP] = nil
+            end
+        end
     end
 end)
