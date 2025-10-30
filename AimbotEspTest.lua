@@ -4,42 +4,42 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
 -- === SETTINGS ===
 local LOCK_KEY = Enum.KeyCode.L
-local cameraLockEnabled = false
+local lockEnabled = false
 
 -- === GUI SETUP ===
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CameraLockGUI"
+ScreenGui.Name = "BodyLockGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 180, 0, 40)
+ToggleButton.Size = UDim2.new(0, 200, 0, 40)
 ToggleButton.Position = UDim2.new(0, 20, 0, 100)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 20
-ToggleButton.Text = "🔓 Camera Lock: OFF"
+ToggleButton.Text = "🔓 Body Lock: OFF"
 ToggleButton.Parent = ScreenGui
 ToggleButton.BorderSizePixel = 0
 ToggleButton.AutoButtonColor = true
 
--- === UPDATE BUTTON VISUALS ===
-local function updateButtonVisual()
-	if cameraLockEnabled then
-		ToggleButton.Text = "🔒 Camera Lock: ON"
+local function updateButton()
+	if lockEnabled then
+		ToggleButton.Text = "🔒 Body Lock: ON"
 		ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 150, 60)
 	else
-		ToggleButton.Text = "🔓 Camera Lock: OFF"
+		ToggleButton.Text = "🔓 Body Lock: OFF"
 		ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 	end
 end
 
--- === HIGHLIGHT ALL PLAYERS ===
+-- === HIGHLIGHT PLAYERS ===
 local function highlightCharacter(character)
 	local highlight = Instance.new("Highlight")
 	highlight.FillColor = Color3.fromRGB(255, 255, 0)
@@ -85,43 +85,37 @@ local function getNearestPlayer()
 			end
 		end
 	end
-
 	return nearestPlayer
 end
 
--- === CAMERA LOCK LOOP ===
+-- === ROTATE BODY TOWARDS NEAREST PLAYER ===
 RunService.RenderStepped:Connect(function()
-	if not cameraLockEnabled then return end
+	if not lockEnabled then return end
 	local nearest = getNearestPlayer()
 	if nearest and nearest.Character and nearest.Character:FindFirstChild("HumanoidRootPart") then
-		Camera.CameraSubject = nearest.Character:FindFirstChild("Humanoid")
-		Camera.CFrame = CFrame.new(Camera.CFrame.Position, nearest.Character.HumanoidRootPart.Position)
+		local targetPos = nearest.Character.HumanoidRootPart.Position
+		local myPos = HumanoidRootPart.Position
+		local lookVector = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos).Unit
+		HumanoidRootPart.CFrame = CFrame.new(myPos, myPos + lookVector)
 	end
 end)
 
 -- === TOGGLE FUNCTION ===
-local function toggleCameraLock()
-	cameraLockEnabled = not cameraLockEnabled
-	updateButtonVisual()
-
-	if not cameraLockEnabled then
-		-- Reset camera to local player
-		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-			Camera.CameraSubject = LocalPlayer.Character:FindFirstChild("Humanoid")
-		end
-	end
+local function toggleLock()
+	lockEnabled = not lockEnabled
+	updateButton()
 end
 
 -- === BUTTON CLICK ===
-ToggleButton.MouseButton1Click:Connect(toggleCameraLock)
+ToggleButton.MouseButton1Click:Connect(toggleLock)
 
--- === KEYBIND TOGGLE ===
+-- === KEYBIND ===
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == LOCK_KEY then
-		toggleCameraLock()
+		toggleLock()
 	end
 end)
 
--- Initialize visuals
-updateButtonVisual()
+-- INITIALIZE
+updateButton()
