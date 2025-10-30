@@ -1,4 +1,4 @@
--- StarterPlayerScripts/SpinFlingerFlyAdvanced.lua
+-- StarterPlayerScripts/SpinFlingerFlyToggle.lua
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -14,27 +14,34 @@ ScreenGui.Name = "SpinFlingerGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Toggle button
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0, 220, 0, 40)
-ToggleButton.Position = UDim2.new(0, 20, 0, 50)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 150)
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.Font = Enum.Font.SourceSansBold
-ToggleButton.TextSize = 20
-ToggleButton.Text = "🌀 Spin Flinger: OFF"
-ToggleButton.Parent = ScreenGui
-ToggleButton.BorderSizePixel = 0
-ToggleButton.AutoButtonColor = true
+-- Helper: Create toggle buttons
+local function createToggle(parent, text, yPos, default)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 200, 0, 40)
+    btn.Position = UDim2.new(0, 20, 0, yPos)
+    btn.BackgroundColor3 = default and Color3.fromRGB(60,150,60) or Color3.fromRGB(150,60,60)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 18
+    btn.Text = text..(default and ": ON" or ": OFF")
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = true
+    btn.Parent = parent
 
-local enabled = false
-ToggleButton.MouseButton1Click:Connect(function()
-    enabled = not enabled
-    ToggleButton.Text = enabled and "🌀 Spin Flinger: ON" or "🌀 Spin Flinger: OFF"
-    ToggleButton.BackgroundColor3 = enabled and Color3.fromRGB(60,150,60) or Color3.fromRGB(60,60,150)
-end)
+    local state = default
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = text..(state and ": ON" or ": OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(60,150,60) or Color3.fromRGB(150,60,60)
+    end)
+    return function() return state end
+end
 
--- Helper function to create sliders
+-- Toggle buttons
+local flyEnabled = createToggle(ScreenGui, "Fly", 50, true)
+local spinEnabled = createToggle(ScreenGui, "Spin", 100, true)
+
+-- Helper: create sliders
 local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 220, 0, 60)
@@ -86,15 +93,15 @@ local function createSlider(parent, labelText, yPos, minVal, maxVal, defaultVal)
             return value
         end
     end)
-    return function() -- returns a getter function
+    return function() 
         local rel = knob.Size.X.Scale
         return minVal + rel*(maxVal-minVal)
     end
 end
 
--- Create sliders
-local getFlySpeed = createSlider(ScreenGui, "Fly Speed", 110, 10, 200, 50)
-local getSpinSpeed = createSlider(ScreenGui, "Spin Speed", 190, 500, 5000, 2000)
+-- Sliders
+local getFlySpeed = createSlider(ScreenGui, "Fly Speed", 170, 10, 200, 50)
+local getSpinSpeed = createSlider(ScreenGui, "Spin Speed", 250, 500, 5000, 2000)
 
 -- Movement keys
 local moveVec = Vector3.new(0,0,0)
@@ -122,13 +129,20 @@ end
 
 -- Main loop
 RunService.RenderStepped:Connect(function(dt)
-    if not enabled then
-        if HRP then HRP.AssemblyAngularVelocity = Vector3.new(0,0,0) end
-        return
-    end
     if not HRP or not HRP.Parent then return end
-
     updateMoveVec()
-    HRP.Velocity = moveVec * getFlySpeed()
-    HRP.AssemblyAngularVelocity = Vector3.new(0, getSpinSpeed(), 0)
+
+    -- Fly
+    if flyEnabled() then
+        HRP.Velocity = moveVec * getFlySpeed()
+    else
+        HRP.Velocity = Vector3.new(0,0,0)
+    end
+
+    -- Spin
+    if spinEnabled() then
+        HRP.AssemblyAngularVelocity = Vector3.new(0, getSpinSpeed(), 0)
+    else
+        HRP.AssemblyAngularVelocity = Vector3.new(0,0,0)
+    end
 end)
