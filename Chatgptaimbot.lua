@@ -1,102 +1,74 @@
--- Run this in the CLIENT console (F9 > Client)
 local LocalPlayer = game:GetService("Players").LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local scriptSource = [[
+local scriptInstance = Instance.new("LocalScript")
+scriptInstance.Source = [[
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- GUI Setup
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "POVGui"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
+-- Create GUI
+local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+local btn = Instance.new("TextButton", gui)
+btn.Size = UDim2.new(0, 200, 0, 50)
+btn.Position = UDim2.new(0, 10, 0, 10)
+btn.Text = "Lock POV: OFF"
 
-local Button = Instance.new("TextButton")
-Button.Size = UDim2.new(0, 200, 0, 50)
-Button.Position = UDim2.new(0, 10, 0, 10)
-Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Button.TextColor3 = Color3.new(1, 1, 1)
-Button.Font = Enum.Font.SourceSansBold
-Button.TextSize = 22
-Button.Text = "Lock POV: OFF"
-Button.Parent = ScreenGui
-
-local lockEnabled = false
-Button.MouseButton1Click:Connect(function()
-	lockEnabled = not lockEnabled
-	Button.Text = "Lock POV: " .. (lockEnabled and "ON" or "OFF")
-	Button.BackgroundColor3 = lockEnabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
+local lock = false
+btn.MouseButton1Click:Connect(function()
+	lock = not lock
+	btn.Text = "Lock POV: " .. (lock and "ON" or "OFF")
 end)
 
--- Find closest player
-local function getClosestPlayer()
+local function getClosest()
 	local myChar = LocalPlayer.Character
-	if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+	if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
 	local myPos = myChar.HumanoidRootPart.Position
-	local closestPlayer, shortestDist = nil, math.huge
-	for _, p in ipairs(Players:GetPlayers()) do
+	local closest, dist = nil, math.huge
+	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-			local dist = (p.Character.HumanoidRootPart.Position - myPos).Magnitude
-			if dist < shortestDist then
-				shortestDist = dist
-				closestPlayer = p
+			local d = (p.Character.HumanoidRootPart.Position - myPos).Magnitude
+			if d < dist then
+				dist = d
+				closest = p
 			end
 		end
 	end
-	return closestPlayer
+	return closest
 end
 
--- Highlights
-local highlightFolder = Instance.new("Folder")
-highlightFolder.Name = "PlayerHighlights"
-highlightFolder.Parent = workspace
-
-local function updateHighlights()
-	highlightFolder:ClearAllChildren()
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character then
-			local highlight = Instance.new("Highlight")
-			highlight.Adornee = p.Character
-			highlight.FillColor = Color3.fromRGB(255, 0, 0)
-			highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
-			highlight.Parent = highlightFolder
-		end
-	end
-end
-
+-- Highlight all players
+local folder = Instance.new("Folder", workspace)
+folder.Name = "Highlights"
 task.spawn(function()
 	while true do
-		updateHighlights()
+		folder:ClearAllChildren()
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= LocalPlayer and p.Character then
+				local h = Instance.new("Highlight")
+				h.Adornee = p.Character
+				h.FillColor = Color3.fromRGB(255, 0, 0)
+				h.Parent = folder
+			end
+		end
 		task.wait(2)
 	end
 end)
 
--- Camera Lock
-RunService:BindToRenderStep("POVLockStep", Enum.RenderPriority.Camera.Value + 1, function()
-	if not lockEnabled then
+RunService:BindToRenderStep("POVLock", Enum.RenderPriority.Camera.Value + 1, function()
+	if not lock then
 		Camera.CameraType = Enum.CameraType.Custom
 		return
 	end
-	local myChar = LocalPlayer.Character
-	if not myChar then return end
-	local head = myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart")
-	if not head then return end
-	local closest = getClosestPlayer()
-	if closest and closest.Character and closest.Character:FindFirstChild("HumanoidRootPart") then
-		local targetPos = closest.Character.HumanoidRootPart.Position
+	local me = LocalPlayer.Character
+	if not me then return end
+	local head = me:FindFirstChild("Head") or me:FindFirstChild("HumanoidRootPart")
+	local target = getClosest()
+	if head and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
 		Camera.CameraType = Enum.CameraType.Scriptable
-		Camera.CFrame = CFrame.lookAt(head.Position, targetPos)
+		Camera.CFrame = CFrame.lookAt(head.Position, target.Character.HumanoidRootPart.Position)
 	end
 end)
 ]]
-
--- Create and run the LocalScript
-local scriptInstance = Instance.new("LocalScript")
-scriptInstance.Name = "POV_LockScript"
-scriptInstance.Source = scriptSource
-scriptInstance.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-print("✅ POV Lock Script loaded! Use the on-screen button to enable/disable.")
+scriptInstance.Parent = PlayerGui
