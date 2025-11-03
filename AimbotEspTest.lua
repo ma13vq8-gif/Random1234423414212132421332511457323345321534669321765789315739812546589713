@@ -9,6 +9,7 @@ local Camera = workspace.CurrentCamera
 -- === SETTINGS ===
 local LOCK_KEY = Enum.KeyCode.L
 local lockEnabled = false
+local guiMinimized = false
 
 -- === GUI SETUP ===
 local ScreenGui = Instance.new("ScreenGui")
@@ -16,15 +17,24 @@ ScreenGui.Name = "FullLockGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
+-- === Main Frame ===
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 240, 0, 270)
+MainFrame.Position = UDim2.new(0, 20, 0, 100)
+MainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+-- === Toggle Lock Button ===
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 200, 0, 40)
-ToggleButton.Position = UDim2.new(0, 20, 0, 100)
+ToggleButton.Position = UDim2.new(0, 20, 0, 10)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 20
 ToggleButton.Text = "🔓 Lock: OFF"
-ToggleButton.Parent = ScreenGui
+ToggleButton.Parent = MainFrame
 ToggleButton.BorderSizePixel = 0
 ToggleButton.AutoButtonColor = true
 
@@ -37,6 +47,28 @@ local function updateButton()
 		ToggleButton.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 	end
 end
+
+-- === Minimize / Expand Button ===
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
+MinimizeButton.Position = UDim2.new(1, -35, 0, 5)
+MinimizeButton.Text = "—"
+MinimizeButton.Font = Enum.Font.SourceSansBold
+MinimizeButton.TextSize = 20
+MinimizeButton.TextColor3 = Color3.fromRGB(255,255,255)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(100,100,100)
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.Parent = MainFrame
+
+MinimizeButton.MouseButton1Click:Connect(function()
+	guiMinimized = not guiMinimized
+	for _, child in pairs(MainFrame:GetChildren()) do
+		if child ~= ToggleButton and child ~= MinimizeButton then
+			child.Visible = not guiMinimized
+		end
+	end
+	MinimizeButton.Text = guiMinimized and "+" or "—"
+end)
 
 -- === HIGHLIGHT PLAYERS ===
 local function highlightCharacter(character)
@@ -120,11 +152,11 @@ updateButton()
 
 -- === COLOR SLIDERS GUI ===
 local SliderFrame = Instance.new("Frame")
-SliderFrame.Size = UDim2.new(0, 220, 0, 110)
-SliderFrame.Position = UDim2.new(0, 20, 0, 160)
+SliderFrame.Size = UDim2.new(0, 200, 0, 110)
+SliderFrame.Position = UDim2.new(0, 20, 0, 60)
 SliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 SliderFrame.BorderSizePixel = 0
-SliderFrame.Parent = ScreenGui
+SliderFrame.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 20)
@@ -197,7 +229,6 @@ local getGreen = createSlider("G", 50, 255)
 local getBlue = createSlider("B", 75, 0)
 
 -- === HIGHLIGHT MANAGEMENT ===
--- Ensure highlight exists
 local function ensureHighlight(character)
 	local highlight = character:FindFirstChildOfClass("Highlight")
 	if not highlight then
@@ -207,7 +238,6 @@ local function ensureHighlight(character)
 	return highlight
 end
 
--- Refresh all highlights and update color
 local function refreshHighlights()
 	local r, g, b = getRed(), getGreen(), getBlue()
 	local color = Color3.fromRGB(r,g,b)
@@ -222,7 +252,7 @@ local function refreshHighlights()
 	end
 end
 
--- Player joins or respawns: instant highlight
+-- Instant highlight for joining players
 Players.PlayerAdded:Connect(function(player)
 	player.CharacterAdded:Connect(function(character)
 		local highlight = ensureHighlight(character)
@@ -248,5 +278,42 @@ spawn(function()
 	while true do
 		refreshHighlights()
 		wait(1)
+	end
+end)
+
+-- === DRAGGABLE GUI ===
+local dragging = false
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input == dragInput then
+		update(input)
 	end
 end)
