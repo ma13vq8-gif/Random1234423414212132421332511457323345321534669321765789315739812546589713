@@ -48,26 +48,7 @@ local function highlightCharacter(character)
 	highlight.Parent = character
 end
 
-for _, player in pairs(Players:GetPlayers()) do
-	if player ~= LocalPlayer and player.Character then
-		highlightCharacter(player.Character)
-	end
-	player.CharacterAdded:Connect(function(character)
-		if player ~= LocalPlayer then
-			highlightCharacter(character)
-		end
-	end)
-end
-
-Players.PlayerAdded:Connect(function(player)
-	player.CharacterAdded:Connect(function(character)
-		if player ~= LocalPlayer then
-			highlightCharacter(character)
-		end
-	end)
-end)
-
--- === HELPER FUNCTION ===
+-- === HELPER FUNCTIONS ===
 local function getNearestPlayer()
 	local localChar = LocalPlayer.Character
 	if not localChar or not localChar:FindFirstChild("HumanoidRootPart") then return nil end
@@ -116,7 +97,6 @@ local function toggleLock()
 	lockEnabled = not lockEnabled
 	updateButton()
 	if not lockEnabled then
-		-- Reset camera to default
 		Camera.CameraType = Enum.CameraType.Custom
 		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
 			Camera.CameraSubject = LocalPlayer.Character.Humanoid
@@ -138,7 +118,7 @@ end)
 -- INITIALIZE
 updateButton()
 
--- === COLOR SLIDERS ===
+-- === COLOR SLIDERS GUI ===
 local SliderFrame = Instance.new("Frame")
 SliderFrame.Size = UDim2.new(0, 220, 0, 110)
 SliderFrame.Position = UDim2.new(0, 20, 0, 160)
@@ -216,16 +196,57 @@ local getRed = createSlider("R", 25, 255)
 local getGreen = createSlider("G", 50, 255)
 local getBlue = createSlider("B", 75, 0)
 
--- Update highlights every frame
-RunService.RenderStepped:Connect(function()
+-- === HIGHLIGHT MANAGEMENT ===
+-- Ensure highlight exists
+local function ensureHighlight(character)
+	local highlight = character:FindFirstChildOfClass("Highlight")
+	if not highlight then
+		highlightCharacter(character)
+		highlight = character:FindFirstChildOfClass("Highlight")
+	end
+	return highlight
+end
+
+-- Refresh all highlights and update color
+local function refreshHighlights()
 	local r, g, b = getRed(), getGreen(), getBlue()
 	local color = Color3.fromRGB(r,g,b)
+
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character then
-			local highlight = player.Character:FindFirstChildOfClass("Highlight")
+			local highlight = ensureHighlight(player.Character)
 			if highlight then
 				highlight.FillColor = color
 			end
 		end
+	end
+end
+
+-- Player joins or respawns: instant highlight
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		local highlight = ensureHighlight(character)
+		if highlight then
+			local r, g, b = getRed(), getGreen(), getBlue()
+			highlight.FillColor = Color3.fromRGB(r,g,b)
+		end
+	end)
+end)
+
+for _, player in pairs(Players:GetPlayers()) do
+	player.CharacterAdded:Connect(function(character)
+		local highlight = ensureHighlight(character)
+		if highlight then
+			local r, g, b = getRed(), getGreen(), getBlue()
+			highlight.FillColor = Color3.fromRGB(r,g,b)
+		end
+	end)
+end
+
+-- Refresh highlights every 1 second
+spawn(function()
+	while true do
+		refreshHighlights()
+		wait(1)
 	end
 end)
