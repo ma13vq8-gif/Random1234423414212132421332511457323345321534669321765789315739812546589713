@@ -1,74 +1,105 @@
-local LocalPlayer = game:GetService("Players").LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+-- LocalScript
 
-local scriptInstance = Instance.new("LocalScript")
-scriptInstance.Source = [[
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Create GUI
-local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-local btn = Instance.new("TextButton", gui)
-btn.Size = UDim2.new(0, 200, 0, 50)
-btn.Position = UDim2.new(0, 10, 0, 10)
-btn.Text = "Lock POV: OFF"
+-- Wait for character
+LocalPlayer.CharacterAdded:Wait()
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
-local lock = false
-btn.MouseButton1Click:Connect(function()
-	lock = not lock
-	btn.Text = "Lock POV: " .. (lock and "ON" or "OFF")
+-- GUI setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "POVGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0, 200, 0, 50)
+Button.Position = UDim2.new(0, 10, 0, 10)
+Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Button.TextColor3 = Color3.new(1, 1, 1)
+Button.Font = Enum.Font.SourceSansBold
+Button.TextSize = 22
+Button.Text = "Lock POV: OFF"
+Button.Parent = ScreenGui
+
+local lockEnabled = false
+Button.MouseButton1Click:Connect(function()
+	lockEnabled = not lockEnabled
+	Button.Text = "Lock POV: " .. (lockEnabled and "ON" or "OFF")
+	Button.BackgroundColor3 = lockEnabled and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
 end)
 
-local function getClosest()
+-- Helper: Get closest player
+local function getClosestPlayer()
 	local myChar = LocalPlayer.Character
 	if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
 	local myPos = myChar.HumanoidRootPart.Position
-	local closest, dist = nil, math.huge
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-			local d = (p.Character.HumanoidRootPart.Position - myPos).Magnitude
-			if d < dist then
-				dist = d
-				closest = p
+
+	local closest, minDist = nil, math.huge
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+			local dist = (plr.Character.HumanoidRootPart.Position - myPos).Magnitude
+			if dist < minDist then
+				minDist = dist
+				closest = plr
 			end
 		end
 	end
 	return closest
 end
 
--- Highlight all players
-local folder = Instance.new("Folder", workspace)
-folder.Name = "Highlights"
+-- Highlight system
+local highlightFolder = Instance.new("Folder")
+highlightFolder.Name = "PlayerHighlights"
+highlightFolder.Parent = workspace
+
+local function updateHighlights()
+	highlightFolder:ClearAllChildren()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer and plr.Character then
+			local h = Instance.new("Highlight")
+			h.Adornee = plr.Character
+			h.FillColor = Color3.fromRGB(255, 0, 0)
+			h.OutlineColor = Color3.fromRGB(0, 0, 0)
+			h.Parent = highlightFolder
+		end
+	end
+end
+
 task.spawn(function()
 	while true do
-		folder:ClearAllChildren()
-		for _, p in pairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer and p.Character then
-				local h = Instance.new("Highlight")
-				h.Adornee = p.Character
-				h.FillColor = Color3.fromRGB(255, 0, 0)
-				h.Parent = folder
-			end
-		end
+		updateHighlights()
 		task.wait(2)
 	end
 end)
 
-RunService:BindToRenderStep("POVLock", Enum.RenderPriority.Camera.Value + 1, function()
-	if not lock then
-		Camera.CameraType = Enum.CameraType.Custom
+-- Camera Control
+local camModuleDisabled = false
+RunService:BindToRenderStep("POVLockStep", Enum.RenderPriority.Camera.Value + 1, function()
+	if not lockEnabled then
+		if camModuleDisabled then
+			Camera.CameraType = Enum.CameraType.Custom
+			camModuleDisabled = false
+		end
 		return
 	end
-	local me = LocalPlayer.Character
-	if not me then return end
-	local head = me:FindFirstChild("Head") or me:FindFirstChild("HumanoidRootPart")
-	local target = getClosest()
-	if head and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+
+	local myChar = LocalPlayer.Character
+	if not myChar then return end
+	local head = myChar:FindFirstChild("Head") or myChar:FindFirstChild("HumanoidRootPart")
+	if not head then return end
+
+	local target = getClosestPlayer()
+	if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
 		Camera.CameraType = Enum.CameraType.Scriptable
-		Camera.CFrame = CFrame.lookAt(head.Position, target.Character.HumanoidRootPart.Position)
+		camModuleDisabled = true
+		local targetPos = target.Character.HumanoidRootPart.Position
+		local headPos = head.Position
+		Camera.CFrame = CFrame.lookAt(headPos, targetPos)
 	end
 end)
-]]
-scriptInstance.Parent = PlayerGui
