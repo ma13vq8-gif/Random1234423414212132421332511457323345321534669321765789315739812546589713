@@ -1,3 +1,5 @@
+THIS SCIPT DOS NOT WORK! do not try this
+
 -- LocalScript
 
 local Players = game:GetService("Players")
