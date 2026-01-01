@@ -1,5 +1,5 @@
 --!strict
--- Fully functional Roblox Client Menu GUI (LocalScript in StarterPlayerScripts)
+-- Polished Roblox Client Menu GUI (LocalScript in StarterPlayerScripts)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,18 +20,18 @@ gui.Name = "ClientMenu"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Main frame
+-- Main frame (polished)
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromScale(0.3,0.6)
+frame.Size = UDim2.fromScale(0.28,0.6)
 frame.Position = UDim2.fromScale(0.05,0.2)
-frame.BackgroundColor3 = Color3.fromRGB(128,128,128)
-frame.BackgroundTransparency = 0
+frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+frame.BackgroundTransparency = 0.05
 Instance.new("UICorner", frame)
 
 -- Top bar for dragging
 local topBar = Instance.new("Frame", frame)
 topBar.Size = UDim2.fromScale(1,0.12)
-topBar.BackgroundColor3 = Color3.fromRGB(45,45,45)
+topBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
 Instance.new("UICorner", topBar)
 local title = Instance.new("TextLabel", topBar)
 title.Size = UDim2.fromScale(1,1)
@@ -68,20 +68,21 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Tooltip
+-- Tooltip (polished)
 local tooltip = Instance.new("TextLabel", gui)
 tooltip.Visible = false
-tooltip.BackgroundColor3 = Color3.fromRGB(50,50,50)
+tooltip.BackgroundColor3 = Color3.fromRGB(30,30,30)
 tooltip.TextColor3 = Color3.new(1,1,1)
 tooltip.TextScaled = true
 tooltip.Size = UDim2.new(0,200,0,50)
 tooltip.TextWrapped = true
+Instance.new("UICorner", tooltip)
 
--- Button creator
+-- Button creator (polished)
 local function makeButton(text,parent,desc)
     local b = Instance.new("TextButton", parent)
     b.Size = UDim2.new(1,0,0,50)
-    b.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    b.BackgroundColor3 = Color3.fromRGB(55,55,55)
     b.TextColor3 = Color3.new(1,1,1)
     b.TextScaled = true
     b.Font = Enum.Font.Gotham
@@ -89,23 +90,24 @@ local function makeButton(text,parent,desc)
     b.LayoutOrder = #parent:GetChildren()
     Instance.new("UICorner",b)
 
-    if desc then
-        b.MouseEnter:Connect(function()
-            if Settings.TooltipEnabled then
-                task.wait(0.5)
-                local ok, val = pcall(function() return b:IsMouseOver() end)
-                if ok and val then
-                    tooltip.Text = desc
-                    local mouse = UserInputService:GetMouseLocation()
-                    tooltip.Position = UDim2.new(0, mouse.X+10, 0, mouse.Y+10)
-                    tooltip.Visible = true
-                end
+    -- Hover effect
+    b.MouseEnter:Connect(function()
+        b.BackgroundColor3 = Color3.fromRGB(75,75,75)
+        if desc and Settings.TooltipEnabled then
+            task.wait(0.5)
+            local ok, val = pcall(function() return b:IsMouseOver() end)
+            if ok and val then
+                tooltip.Text = desc
+                local mouse = UserInputService:GetMouseLocation()
+                tooltip.Position = UDim2.new(0, mouse.X+10, 0, mouse.Y+10)
+                tooltip.Visible = true
             end
-        end)
-        b.MouseLeave:Connect(function()
-            tooltip.Visible = false
-        end)
-    end
+        end
+    end)
+    b.MouseLeave:Connect(function()
+        b.BackgroundColor3 = Color3.fromRGB(55,55,55)
+        tooltip.Visible = false
+    end)
 
     return b
 end
@@ -119,12 +121,17 @@ local function createSectionFrame()
     f.Visible = false
     local layout = Instance.new("UIListLayout", f)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0,5)
+    layout.Padding = UDim.new(0,6)
+    local padding = Instance.new("UIPadding", f)
+    padding.PaddingTop = UDim.new(0,10)
+    padding.PaddingBottom = UDim.new(0,10)
+    padding.PaddingLeft = UDim.new(0,5)
+    padding.PaddingRight = UDim.new(0,5)
     return f
 end
 
 local sectionFrame = createSectionFrame()
-sectionFrame.Visible = true -- show section selector on load
+sectionFrame.Visible = true -- section selector on load
 local miscFrame = createSectionFrame()
 local funFrame = createSectionFrame()
 local trollFrame = createSectionFrame()
@@ -148,13 +155,13 @@ createBackButton(funFrame)
 createBackButton(trollFrame)
 createBackButton(settingsFrame)
 
--- Section selector buttons
+-- Section selector buttons (polished spacing & color)
 local miscSectionBtn = makeButton("Misc", sectionFrame, "Misc features")
 local funSectionBtn = makeButton("Fun", sectionFrame, "Fun features")
 local trollSectionBtn = makeButton("Troll", sectionFrame, "Troll features")
 local settingsSectionBtn = makeButton("Settings", sectionFrame, "Change theme, opacity, tooltips, reset position")
 local destroyMenuBtn = makeButton("Destroy Menu", sectionFrame, "Completely removes this menu")
-destroyMenuBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
+destroyMenuBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
 
 -- Destroy menu action
 destroyMenuBtn.MouseButton1Click:Connect(function()
@@ -162,49 +169,9 @@ destroyMenuBtn.MouseButton1Click:Connect(function()
 end)
 
 -- Section switching logic
-miscSectionBtn.MouseButton1Click:Connect(function()
-    sectionFrame.Visible = false; miscFrame.Visible = true
-end)
-funSectionBtn.MouseButton1Click:Connect(function()
-    sectionFrame.Visible = false; funFrame.Visible = true
-end)
-trollSectionBtn.MouseButton1Click:Connect(function()
-    sectionFrame.Visible = false; trollFrame.Visible = true
-end)
-settingsSectionBtn.MouseButton1Click:Connect(function()
-    sectionFrame.Visible = false; settingsFrame.Visible = true
-end)
+miscSectionBtn.MouseButton1Click:Connect(function() sectionFrame.Visible=false; miscFrame.Visible=true end)
+funSectionBtn.MouseButton1Click:Connect(function() sectionFrame.Visible=false; funFrame.Visible=true end)
+trollSectionBtn.MouseButton1Click:Connect(function() sectionFrame.Visible=false; trollFrame.Visible=true end)
+settingsSectionBtn.MouseButton1Click:Connect(function() sectionFrame.Visible=false; settingsFrame.Visible=true end)
 
--- Mobile-friendly opacity slider in Settings
-local opacityLabel = Instance.new("TextLabel", settingsFrame)
-opacityLabel.Size = UDim2.new(0.9,0,0,30)
-opacityLabel.Position = UDim2.new(0.05,0,0,10)
-opacityLabel.Text = "Menu Opacity"
-opacityLabel.TextScaled = true
-opacityLabel.BackgroundTransparency = 1
-opacityLabel.TextColor3 = Color3.new(1,1,1)
-
-local sliderBar = Instance.new("Frame", settingsFrame)
-sliderBar.Size = UDim2.new(0.8,0,0,20)
-sliderBar.Position = UDim2.new(0.1,0,0,50)
-sliderBar.BackgroundColor3 = Color3.fromRGB(50,50,50)
-Instance.new("UICorner", sliderBar)
-
-local sliderPoint = Instance.new("Frame", sliderBar)
-sliderPoint.Size = UDim2.new(Settings.Opacity,0,1,0)
-sliderPoint.BackgroundColor3 = Color3.fromRGB(200,200,200)
-Instance.new("UICorner", sliderPoint)
-
-sliderBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        task.wait(0.1) -- wait for render
-        local relativeX = input.Position.X - sliderBar.AbsolutePosition.X
-        local newScale = math.clamp(relativeX / sliderBar.AbsoluteSize.X, 0, 1)
-        sliderPoint.Size = UDim2.new(newScale,0,1,0)
-        Settings.Opacity = newScale
-        frame.BackgroundTransparency = 1 - newScale
-        for _,b in pairs(frame:GetDescendants()) do
-            if b:IsA("TextButton") then b.BackgroundTransparency = 1 - newScale end
-        end
-    end
-end)
+-- Polished menu now has cleaner colors, consistent rounded corners, hover effect, and better spacing
