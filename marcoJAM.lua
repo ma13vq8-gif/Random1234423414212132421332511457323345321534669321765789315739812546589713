@@ -1,8 +1,17 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local root = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
+
+-- RemoteEvents for Troll features
+local TrollRemotes = ReplicatedStorage:WaitForChild("TrollRemotes")
+-- Make sure ReplicatedStorage → TrollRemotes has:
+-- SpookPlayer, HeadSit, FakeDeath (RemoteEvents)
 
 -- Dummy variables to prevent errors
 local flyEnabled, flyBV, flyBG = false, nil, nil
@@ -11,7 +20,7 @@ local trail, rainbowTrailEnabled = nil, false
 local spinEnabled, bigHeadEnabled, confettiEnabled = false, false, false
 local tracersEnabled = false
 
--- GUI
+-- UI
 local gui = Instance.new("ScreenGui")
 gui.Parent = player:WaitForChild("PlayerGui")
 gui.Name = "ClientMenu"
@@ -59,7 +68,7 @@ topBar.InputEnded:Connect(function(input)
 		dragging = false
 	end
 end)
-game:GetService("UserInputService").InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
 	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 		updateDrag(input)
 	end
@@ -138,20 +147,78 @@ backTroll.MouseButton1Click:Connect(function()
 	sectionFrame.Visible = true
 end)
 
--- Minimal buttons (no functionality yet)
-makeButton("ESP",0.05,miscFrame)
-makeButton("Fly",0.15,miscFrame)
-makeButton("Noclip",0.25,miscFrame)
-makeButton("Gravity",0.35,miscFrame)
-makeButton("Tracers",0.45,miscFrame)
-makeButton("Destroy / Panic",0.55,miscFrame)
+---------------------------------------------------
+-- MISC BUTTONS (Panic at top)
+---------------------------------------------------
+local panicBtn = makeButton("Destroy / Panic",0.05,miscFrame)
+local espBtn = makeButton("ESP: OFF",0.15,miscFrame)
+local flyBtn = makeButton("Fly: OFF",0.25,miscFrame)
+local flySpeedBtn = makeButton("Fly Speed: 60",0.35,miscFrame)
+local noclipBtn = makeButton("Noclip: OFF",0.45,miscFrame)
+local gravBtn = makeButton("Gravity: 50",0.55,miscFrame)
+local presetLow = makeButton("Low (20)",0.6,miscFrame)
+local presetNormal = makeButton("Normal (50)",0.65,miscFrame)
+local presetHeavy = makeButton("Heavy (80)",0.7,miscFrame)
+local customPresetBtn = makeButton("+ Add Preset",0.75,miscFrame)
+local tracersBtn = makeButton("Tracers: OFF",0.8,miscFrame)
 
-makeButton("Spin",0.05,funFrame)
-makeButton("BigHead",0.15,funFrame)
-makeButton("Confetti",0.25,funFrame)
-makeButton("RainbowTrail",0.35,funFrame)
-makeButton("Swim",0.45,funFrame)
+---------------------------------------------------
+-- FUN BUTTONS
+---------------------------------------------------
+makeButton("Spin: OFF",0.05,funFrame)
+makeButton("BigHead: OFF",0.15,funFrame)
+makeButton("Confetti: OFF",0.25,funFrame)
+makeButton("RainbowTrail: OFF",0.35,funFrame)
+makeButton("Swim: OFF",0.45,funFrame)
 
-makeButton("Spook Player",0.05,trollFrame)
-makeButton("Fake Death",0.15,trollFrame)
-makeButton("HeadSit",0.25,trollFrame)
+---------------------------------------------------
+-- TROLL BUTTONS
+---------------------------------------------------
+-- Spook
+local spookBtn = makeButton("Spook Player",0.05,trollFrame)
+local spookBox = Instance.new("TextBox", trollFrame)
+spookBox.Size = UDim2.fromScale(0.9,0.08)
+spookBox.Position = UDim2.fromScale(0.05,0.15)
+spookBox.PlaceholderText = "Enter Username"
+spookBox.TextScaled = true
+spookBox.Visible = false
+spookBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
+spookBox.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", spookBox)
+spookBtn.MouseButton1Click:Connect(function()
+	spookBox.Visible = not spookBox.Visible
+end)
+spookBox.FocusLost:Connect(function(enter)
+	if enter and spookBox.Text ~= "" then
+		TrollRemotes.SpookPlayer:FireServer(spookBox.Text)
+	end
+	spookBox.Text = ""
+	spookBox.Visible = false
+end)
+
+-- Fake Death
+makeButton("Fake Death",0.35,trollFrame).MouseButton1Click:Connect(function()
+	TrollRemotes.FakeDeath:FireServer()
+end)
+
+-- HeadSit
+local headSitBtn = makeButton("HeadSit",0.5,trollFrame)
+local headSitBox = Instance.new("TextBox", trollFrame)
+headSitBox.Size = UDim2.fromScale(0.9,0.08)
+headSitBox.Position = UDim2.fromScale(0.05,0.6)
+headSitBox.PlaceholderText = "Enter Username"
+headSitBox.TextScaled = true
+headSitBox.Visible = false
+headSitBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
+headSitBox.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", headSitBox)
+headSitBtn.MouseButton1Click:Connect(function()
+	headSitBox.Visible = not headSitBox.Visible
+end)
+headSitBox.FocusLost:Connect(function(enter)
+	if enter and headSitBox.Text ~= "" then
+		TrollRemotes.HeadSit:FireServer(headSitBox.Text)
+	end
+	headSitBox.Text = ""
+	headSitBox.Visible = false
+end)
