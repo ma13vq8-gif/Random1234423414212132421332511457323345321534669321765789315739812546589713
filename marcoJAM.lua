@@ -1,26 +1,31 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local root = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- RemoteEvents for Troll features
-local TrollRemotes = ReplicatedStorage:WaitForChild("TrollRemotes")
--- Make sure ReplicatedStorage → TrollRemotes has:
--- SpookPlayer, HeadSit, FakeDeath (RemoteEvents)
-
--- Dummy variables to prevent errors
+-- Dummy variables for safe loading
 local flyEnabled, flyBV, flyBG = false, nil, nil
 local swimEnabled, swimBV, swimBG = false, nil, nil
 local trail, rainbowTrailEnabled = nil, false
 local spinEnabled, bigHeadEnabled, confettiEnabled = false, false, false
 local tracersEnabled = false
 
--- UI
+-- Troll Remotes (make sure these exist)
+local TrollRemotes = ReplicatedStorage:FindFirstChild("TrollRemotes")
+if not TrollRemotes then
+	TrollRemotes = Instance.new("Folder")
+	TrollRemotes.Name = "TrollRemotes"
+	TrollRemotes.Parent = ReplicatedStorage
+	for _, name in ipairs({"SpookPlayer","HeadSit","FakeDeath"}) do
+		local r = Instance.new("RemoteEvent")
+		r.Name = name
+		r.Parent = TrollRemotes
+	end
+end
+
+-- GUI
 local gui = Instance.new("ScreenGui")
 gui.Parent = player:WaitForChild("PlayerGui")
 gui.Name = "ClientMenu"
@@ -46,7 +51,8 @@ title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.GothamBold
 
 -- Drag logic
-local dragging, dragStart, startPos = false
+local dragging, dragStart, startPos = false, nil, nil
+local UserInputService = game:GetService("UserInputService")
 local function updateDrag(input)
 	local delta = input.Position - dragStart
 	frame.Position = UDim2.new(
@@ -162,8 +168,13 @@ local presetHeavy = makeButton("Heavy (80)",0.7,miscFrame)
 local customPresetBtn = makeButton("+ Add Preset",0.75,miscFrame)
 local tracersBtn = makeButton("Tracers: OFF",0.8,miscFrame)
 
+-- Panic dummy function (no actual mods yet)
+panicBtn.MouseButton1Click:Connect(function()
+	print("Panic activated: all mods would be reset here")
+end)
+
 ---------------------------------------------------
--- FUN BUTTONS
+-- FUN BUTTONS (dummy)
 ---------------------------------------------------
 makeButton("Spin: OFF",0.05,funFrame)
 makeButton("BigHead: OFF",0.15,funFrame)
@@ -172,7 +183,7 @@ makeButton("RainbowTrail: OFF",0.35,funFrame)
 makeButton("Swim: OFF",0.45,funFrame)
 
 ---------------------------------------------------
--- TROLL BUTTONS
+-- TROLL BUTTONS (TextBoxes for typing)
 ---------------------------------------------------
 -- Spook
 local spookBtn = makeButton("Spook Player",0.05,trollFrame)
