@@ -1,29 +1,15 @@
 --!strict
--- Place in StarterPlayer -> StarterPlayerScripts
+-- Roblox LocalScript (place in StarterPlayerScripts)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")
-
--- RemoteEvents folder
-local TrollRemotes = ReplicatedStorage:FindFirstChild("TrollRemotes")
-if not TrollRemotes then
-    TrollRemotes = Instance.new("Folder")
-    TrollRemotes.Name = "TrollRemotes"
-    TrollRemotes.Parent = ReplicatedStorage
-    for _, name in ipairs({"SpookPlayer","HeadSit","FakeDeath"}) do
-        local r = Instance.new("RemoteEvent")
-        r.Name = name
-        r.Parent = TrollRemotes
-    end
-end
 
 -- Feature states
 local Features = {
@@ -47,10 +33,7 @@ local Settings = {
     Opacity = 1
 }
 
--- Temporary objects
-local TempObjs = {}
-
--- GUI
+-- GUI setup
 local gui = Instance.new("ScreenGui")
 gui.Name = "ClientMenu"
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -224,32 +207,9 @@ settingsSectionBtn.MouseButton1Click:Connect(function()
     settingsFrame.Visible = true
 end)
 
--- Settings tab: Opacity slider (clickable)
-local opacityLabel = Instance.new("TextLabel", settingsFrame)
-opacityLabel.Size = UDim2.new(0.9,0,0,30)
-opacityLabel.Position = UDim2.new(0.05,0,0,10)
-opacityLabel.Text = "Menu Opacity"
-opacityLabel.TextScaled = true
-opacityLabel.BackgroundTransparency = 1
-opacityLabel.TextColor3 = Color3.new(1,1,1)
-
-local sliderBar = Instance.new("Frame", settingsFrame)
-sliderBar.Size = UDim2.new(0.8,0,0,20)
-sliderBar.Position = UDim2.new(0.1,0,0,50)
-sliderBar.BackgroundColor3 = Color3.fromRGB(50,50,50)
-sliderBar.ClipsDescendants = true
-Instance.new("UICorner", sliderBar)
-
-local sliderPoint = Instance.new("Frame", sliderBar)
-sliderPoint.Size = UDim2.new(Settings.Opacity,0,1,0)
-sliderPoint.BackgroundColor3 = Color3.fromRGB(200,200,200)
-Instance.new("UICorner", sliderPoint)
-
-sliderBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or
-       input.UserInputType == Enum.UserInputType.Touch then
-        local relativeX = input.Position.X - sliderBar.AbsolutePosition.X
-        local newScale = math.clamp(relativeX/sliderBar.AbsoluteSize.X, 0, 1)
-        sliderPoint.Size = UDim2.new(newScale,0,1,0)
-        Settings.Opacity = newScale
-        frame.BackgroundTransparency = 1 - newScale
+-- Ensure the menu is visible on load
+sectionFrame.Visible = true
+miscFrame.Visible = false
+funFrame.Visible = false
+ trollFrame.Visible = false
+settingsFrame.Visible = false
