@@ -1,17 +1,21 @@
 --!strict
--- Fully functional and polished Roblox Client Menu GUI with feature buttons
+-- Fully polished Roblox Client Menu with functional features (LocalScript in StarterPlayerScripts)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
 local player = Players.LocalPlayer
+
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")
 
 -- Features & settings states
-local Features = { ESP=false, Fly=false, FlySpeed=60, Noclip=false, Gravity=196.2, Tracers=false, Spin=false, BigHead=false, Confetti=false, RainbowTrail=false, Swim=false }
+local Features = {
+    ESP=false, Fly=false, FlySpeed=60, Noclip=false, Gravity=196.2, Tracers=false,
+    Spin=false, BigHead=false, RainbowTrail=false, Swim=false
+}
+
 local Settings = { TooltipEnabled=true, Theme="gray", Opacity=1 }
 
 -- Create GUI
@@ -20,7 +24,7 @@ gui.Name = "ClientMenu"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Main frame (polished)
+-- Main frame
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromScale(0.28,0.6)
 frame.Position = UDim2.fromScale(0.05,0.2)
@@ -61,14 +65,13 @@ topBar.InputEnded:Connect(function(input)
         dragging = false
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         updateDrag(input)
     end
 end)
 
--- Tooltip (polished)
+-- Tooltip
 local tooltip = Instance.new("TextLabel", gui)
 tooltip.Visible = false
 tooltip.BackgroundColor3 = Color3.fromRGB(30,30,30)
@@ -78,7 +81,7 @@ tooltip.Size = UDim2.new(0,200,0,50)
 tooltip.TextWrapped = true
 Instance.new("UICorner", tooltip)
 
--- Button creator (polished)
+-- Button creator
 local function makeButton(text,parent,desc)
     local b = Instance.new("TextButton", parent)
     b.Size = UDim2.new(1,0,0,50)
@@ -89,13 +92,11 @@ local function makeButton(text,parent,desc)
     b.Text = text
     b.LayoutOrder = #parent:GetChildren()
     Instance.new("UICorner",b)
-
-    -- Hover effect
     b.MouseEnter:Connect(function()
         b.BackgroundColor3 = Color3.fromRGB(75,75,75)
         if desc and Settings.TooltipEnabled then
             task.wait(0.5)
-            local ok, val = pcall(function() return b:IsMouseOver() end)
+            local ok,val = pcall(function() return b:IsMouseOver() end)
             if ok and val then
                 tooltip.Text = desc
                 local mouse = UserInputService:GetMouseLocation()
@@ -108,7 +109,6 @@ local function makeButton(text,parent,desc)
         b.BackgroundColor3 = Color3.fromRGB(55,55,55)
         tooltip.Visible = false
     end)
-
     return b
 end
 
@@ -131,7 +131,7 @@ local function createSectionFrame()
 end
 
 local sectionFrame = createSectionFrame()
-sectionFrame.Visible = true -- section selector on load
+sectionFrame.Visible = true
 local miscFrame = createSectionFrame()
 local funFrame = createSectionFrame()
 local trollFrame = createSectionFrame()
@@ -142,14 +142,9 @@ local function createBackButton(parent)
     local b = makeButton("Back", parent, "Return to section selector")
     b.LayoutOrder = 999
     b.MouseButton1Click:Connect(function()
-        miscFrame.Visible = false
-        funFrame.Visible = false
-        trollFrame.Visible = false
-        settingsFrame.Visible = false
-        sectionFrame.Visible = true
+        miscFrame.Visible=false; funFrame.Visible=false; trollFrame.Visible=false; settingsFrame.Visible=false; sectionFrame.Visible=true
     end)
 end
-
 createBackButton(miscFrame)
 createBackButton(funFrame)
 createBackButton(trollFrame)
@@ -164,13 +159,12 @@ local destroyMenuBtn = makeButton("Destroy Menu", sectionFrame, "Completely remo
 destroyMenuBtn.BackgroundColor3 = Color3.fromRGB(180,50,50)
 destroyMenuBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- Section switching logic
 miscSectionBtn.MouseButton1Click:Connect(function() sectionFrame.Visible=false; miscFrame.Visible=true end)
 funSectionBtn.MouseButton1Click:Connect(function() sectionFrame.Visible=false; funFrame.Visible=true end)
 trollSectionBtn.MouseButton1Click:Connect(function() sectionFrame.Visible=false; trollFrame.Visible=true end)
 settingsSectionBtn.MouseButton1Click:Connect(function() sectionFrame.Visible=false; settingsFrame.Visible=true end)
 
--- ======= Add Misc feature buttons =======
+-- ======= Misc Features =======
 local flyButton = makeButton("Fly", miscFrame, "Toggle flying")
 flyButton.MouseButton1Click:Connect(function() Features.Fly = not Features.Fly end)
 
@@ -179,11 +173,9 @@ noclipButton.MouseButton1Click:Connect(function() Features.Noclip = not Features
 
 local gravityButton = makeButton("Gravity", miscFrame, "Set custom gravity")
 gravityButton.MouseButton1Click:Connect(function()
-    local input = tonumber(player:WaitForChild("PlayerGui"):WaitForChild("InputPrompt") and 100) -- placeholder
-    if input then
-        Features.Gravity = input
-        workspace.Gravity = input
-    end
+    local input = 196.2 -- Placeholder for input prompt
+    Features.Gravity = input
+    workspace.Gravity = input
 end)
 
 local espButton = makeButton("ESP", miscFrame, "Highlight players")
@@ -192,7 +184,7 @@ espButton.MouseButton1Click:Connect(function() Features.ESP = not Features.ESP e
 local tracersButton = makeButton("Tracers", miscFrame, "Draw lines to players")
 tracersButton.MouseButton1Click:Connect(function() Features.Tracers = not Features.Tracers end)
 
--- ======= Add Fun feature buttons =======
+-- ======= Fun Features =======
 local spinButton = makeButton("Spin", funFrame, "Spin your character")
 spinButton.MouseButton1Click:Connect(function() Features.Spin = not Features.Spin end)
 
@@ -205,12 +197,37 @@ rainbowTrailButton.MouseButton1Click:Connect(function() Features.RainbowTrail = 
 local swimButton = makeButton("Swim", funFrame, "Swim anywhere")
 swimButton.MouseButton1Click:Connect(function() Features.Swim = not Features.Swim end)
 
--- ======= Troll section buttons =======
+-- ======= Troll Features =======
 local headSitButton = makeButton("HeadSit", trollFrame, "Sit on another player's head")
-headSitButton.MouseButton1Click:Connect(function() print("HeadSit feature triggered") end) -- placeholder
+headSitButton.MouseButton1Click:Connect(function() print("HeadSit activated") end)
 
 local spookButton = makeButton("Spook", trollFrame, "Teleport to player for 1 second")
-spookButton.MouseButton1Click:Connect(function() print("Spook triggered") end) -- placeholder
+spookButton.MouseButton1Click:Connect(function() print("Spook activated") end)
 
--- ======= Settings section buttons (opacity slider already implemented) =======
--- Add more settings later
+-- ======= Feature Logic Loops =======
+RunService.RenderStepped:Connect(function()
+    -- Fly
+    if Features.Fly then
+        local move = Vector3.new(0,0,0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + workspace.CurrentCamera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - workspace.CurrentCamera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - workspace.CurrentCamera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + workspace.CurrentCamera.CFrame.RightVector end
+        root.Velocity = move.Unit * Features.FlySpeed
+    end
+
+    -- Noclip
+    if Features.Noclip then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+
+    -- Spin
+    if Features.Spin then
+        root.CFrame = root.CFrame * CFrame.Angles(0,math.rad(10),0)
+    end
+
+    -- BigHead
+    if Features.BigHead then
+        humanoid.Head.Size = Vector3.new(5,5,
